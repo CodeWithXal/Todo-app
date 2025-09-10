@@ -9,6 +9,27 @@ const app = express();
 app.use(express.json());
 
 
+function authMiddleware(req, res, next){
+    const token = req.headers.authorization;
+
+    if(!token){
+        res.status(401).json({
+            message : "No Token provided"
+        });
+    }
+
+    try{
+        const decoded = jwt.verify(token, jwt_secret);
+        req.userId = decoded.id;
+        next();
+    }
+
+    catch(err){
+        res.status(401).json({
+            message : "Invalid Token"
+        });
+    }
+}
 
 async function signup(req, res){
     const email = req.body.email;
@@ -52,12 +73,54 @@ async function signin(req, res){
     }
 }
 
+async function post_todo(req, res){
+    const title = req.body.todo;
+    const done = req.body.done;
 
+    try{
+        await todoModel.create({
+            title,
+            done,
+            userId : req.userId
+        });
+         res.json({
+        message : "Todo added"
+    });
+
+    }
+
+    catch(err){
+        res.status(500).json({
+            message : "Error adding Todo"
+        });
+    }
+
+   
+}
+
+
+async function get_todos(req, res){
+
+    try{
+        const todos = await todoModel.find({userId : req.userId});
+
+        res.json({
+        todos
+    });
+    }
+
+    catch(err){
+        res.status(500).json({
+            message : "Error fetching Todos"
+        });
+    }
+    
+}
 
 app.post("/signup", signup);
 app.post("/signin", signin);
-// app.post("/todo", post_todo);
-// app.get("/todos", get_todos);
+app.post("/todo",authMiddleware, post_todo);
+app.get("/todos",authMiddleware, get_todos);
 
 
 
