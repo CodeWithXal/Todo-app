@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const jwt_secret = "asd123";
 
 
-mongoose.connect
+
 const app = express();
 app.use(express.json());
 
@@ -15,9 +15,9 @@ async function signup(req, res){
     const password = req.body.password;
     const name = req.body.name;
     await userModel.create({
-        email : "xal@gmail.com",
-        password : "123",
-        name : "xal" 
+        email,
+        password,
+        name
     })
 
     res.json({
