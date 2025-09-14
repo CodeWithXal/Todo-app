@@ -2,6 +2,7 @@ const express = require("express");
 const{ userModel, todoModel } = require("./db");
 const jwt = require("jsonwebtoken");
 const jwt_secret = "asd123";
+const bcrypt = require("bcrypt");
 
 
 
@@ -35,10 +36,12 @@ async function signup(req, res){
     const email = req.body.email;
     const password = req.body.password;
     const name = req.body.name;
+
+    const hashed_password = await bcrypt.hash(password,5);
     await userModel.create({
-        email,
-        password,
-        name
+        email : email,
+        password : hashed_password,
+        name : name
     })
 
     res.json({
@@ -51,13 +54,20 @@ async function signin(req, res){
     const password = req.body.password;
     
     const user = await userModel.findOne({
-        email : email,
-        password : password  
+        email : email
     })
 
-    console.log(user);
+    if(!user){
+        res.status(403).json({
+            message : "User doesn't exists in our database "
+        });
+    }
 
-    if(user){
+    const password_match = await bcrypt.compare(password, user.password);
+
+    // console.log(user);
+
+    if(password_match){
         const token = jwt.sign({
             id : user._id
         }, jwt_secret);
@@ -80,6 +90,7 @@ async function post_todo(req, res){
     try{
         await todoModel.create({
             title,
+            description,
             done,
             userId : req.userId
         });
