@@ -3,6 +3,7 @@ const{ userModel, todoModel } = require("./db");
 const jwt = require("jsonwebtoken");
 const jwt_secret = "asd123";
 const bcrypt = require("bcrypt");
+const { z } = require("zod");
 
 
 
@@ -37,16 +38,59 @@ async function signup(req, res){
     const password = req.body.password;
     const name = req.body.name;
 
-    const hashed_password = await bcrypt.hash(password,5);
-    await userModel.create({
-        email : email,
-        password : hashed_password,
-        name : name
-    })
+     const requiredBody = z.object({
+        email: z.string().min(3, "Email must be at least 3 characters")
+                          .max(50, "Email must be at most 50 characters")
+                          .email("Invalid email format"),
+        password: z.string().min(8, "Password must be at least 8 characters")
+                            .max(50, "Password must be at most 50 characters")
+                            .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+                            .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+        name: z.string().min(3, "Name must be at least 3 characters")
+                       .max(50, "Name must be at most 50 characters")
+    });
 
-    res.json({
-        message : "you are signed up"
-    })
+
+    const parsedData = requiredBody.safeParse(req.body);
+
+    if(!parsedData.success){
+
+        const errorMsg = parsedData.error.issues.map(issues =>({
+            field: issues.path[0],
+            message: issues.message
+        }));
+
+        res.status(400).json({
+            message : "Incorrect Format",
+            error : errorMsg
+        });
+        return;
+    }
+
+
+    // const { email, password, name} = parsedData.data;
+    try{
+        const hashed_password = await bcrypt.hash(password,5);
+        await userModel.create({
+            email : email,
+            password : hashed_password,
+            name : name
+        });
+
+        return res.json({
+            message : "You are signed up"
+        })
+    }
+    catch(err){
+        
+        return res.status(400).json({
+                message : "User already exists or Database error",
+                error : err.message
+        });
+        
+    }
+   
+    
 }
 
 async function signin(req, res){
@@ -84,7 +128,8 @@ async function signin(req, res){
 }
 
 async function post_todo(req, res){
-    const title = req.body.todo;
+    const title = req.body.title;
+    const description = req.body.description;
     const done = req.body.done;
 
     try{
