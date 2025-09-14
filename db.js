@@ -12,6 +12,7 @@ const User = new Schema({
 
 const Todo = new Schema({
     title: String,
+    description : String,
     done: Boolean,
     userId: {type : Types.ObjectId, ref : "user" }
 })
